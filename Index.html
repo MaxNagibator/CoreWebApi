@@ -1,0 +1,172 @@
+﻿<!-- HTML for static distribution bundle build -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>%(DocumentTitle)</title>
+    <link rel="stylesheet" type="text/css" href="./swagger-ui.css">
+    <link rel="icon" type="image/png" href="./favicon-32x32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="./favicon-16x16.png" sizes="16x16" />
+    <style>
+
+        html {
+            box-sizing: border-box;
+            overflow: -moz-scrollbars-vertical;
+            overflow-y: scroll;
+        }
+
+        *,
+        *:before,
+        *:after {
+            box-sizing: inherit;
+        }
+
+        body {
+            margin: 0;
+            background: #fafafa;
+        }
+
+        .swagger-ui.swagger-container .topbar.rua {
+            background: #3b4151;
+            text-align: center;
+            color: white;
+        }
+
+        .swagger-ui.swagger-container .topbar.rua input[type="submit"] {
+            margin: 5px 0;
+            padding: 8px 10px;
+            border: 1px solid #89bf04;
+            border-radius: 4px;
+            background: #89bf04;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="swagger-ui swagger-container">
+        <div class="topbar rua">
+            <div class="wrapper">
+                <form id="signin" hidden>
+                    <!--<input id="username" type="email" placeholder="username@contoso.com" pattern=".+@contoso.com" required>-->
+                    <input id="username" type="text" placeholder="login"  required>
+                    <input id="password" type="password" placeholder="password" required>
+                    <input type="submit" value="signin">
+                </form>
+                <form id="signout" hidden>
+                    <span id="hello"></span>
+                    <input type="submit" value="signout">
+                </form>
+            </div>
+        </div>
+</div>
+<div id="swagger-ui"></div>
+
+    <!-- Workaround for https://github.com/swagger-api/swagger-editor/issues/1371 -->
+    <script>
+        if (window.navigator.userAgent.indexOf("Edge") > -1) {
+            console.log("Removing native Edge fetch in favor of swagger-ui's polyfill")
+            window.fetch = undefined;
+        }
+    </script>
+
+    <script src="/swagger/swagger-ui-bundle.js"></script>
+    <script src="/swagger/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function () {
+            var configObject = { "urls": [{ "url": "/swagger/v1/swagger.json", "name": "My API V1" }], "validatorUrl": null };
+            var oauthConfigObject = {};
+
+            // Workaround for https://github.com/swagger-api/swagger-ui/issues/5945
+            configObject.urls.forEach(function (item) {
+                if (item.url.startsWith("http") || item.url.startsWith("/")) return;
+                item.url = window.location.href.replace("index.html", item.url).split('#')[0];
+            });
+
+            // If validatorUrl is not explicitly provided, disable the feature by setting to null
+            if (!configObject.hasOwnProperty("validatorUrl"))
+                configObject.validatorUrl = null
+
+            // If oauth2RedirectUrl isn't specified, use the built-in default
+            if (!configObject.hasOwnProperty("oauth2RedirectUrl"))
+                configObject.oauth2RedirectUrl = window.location.href.replace("index.html", "oauth2-redirect.html").split('#')[0];
+
+            // Apply mandatory parameters
+            configObject.dom_id = "#swagger-ui";
+            configObject.presets = [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset];
+            configObject.layout = "StandaloneLayout";
+
+            var configObject = {
+                urls: [{ url: "/swagger/v1/swagger.json", name: "My API V1" }],
+                validatorUrl: null,
+                dom_id: "#swagger-ui",
+                presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+                layout: "StandaloneLayout",
+                requestInterceptor: req => {
+                    const authInfo = localStorage.getItem("authInfo");
+                    if (authInfo) {
+                        req.headers.authorization = `Bearer ${JSON.parse(authInfo).token}`;
+                    }
+                    return req;
+                },
+
+                onComplete: () => {
+                    const signin = document.getElementById("signin");
+                    const signout = document.getElementById("signout");
+                    const hello = document.getElementById("hello");
+
+                    const update = () => {
+                        const authInfo = localStorage.getItem("authInfo");
+
+                        if (authInfo) {
+                            hello.innerText = JSON.parse(authInfo).username;
+                            signin.hidden = true;
+                            signout.hidden = false;
+                        } else {
+                            signin.hidden = false;
+                            signout.hidden = true;
+                        }
+                    };
+
+                    signin.addEventListener("submit", event => {
+                        event.preventDefault();
+                        const options = {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                username: document.getElementById("username").value,
+                                password: document.getElementById("password").value
+                            })
+                        };
+
+                        fetch("/Users/authenticate", options)
+                            .then(res => res.json())
+                            .then(response => localStorage.setItem("authInfo", JSON.stringify(response)))
+                            .then(update);
+                    });
+
+                    signout.addEventListener("submit", event => {
+                        event.preventDefault();
+                        localStorage.removeItem("authInfo");
+                        update();
+                    });
+
+                    update();
+                }
+            };
+
+            // Begin Swagger UI call region
+
+            const ui = SwaggerUIBundle(configObject);
+
+            ui.initOAuth(oauthConfigObject);
+
+            // End Swagger UI call region
+
+            window.ui = ui
+        }
+    </script>
+</body>
+</html>

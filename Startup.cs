@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Reflection;
     using System.Text;
     using System.Threading.Tasks;
 
@@ -94,46 +95,35 @@
                                 Title = "My API",
                                 Version = "v1"
                             });
-                        c.AddSecurityDefinition(
-                            "Bearer",
-                            new OpenApiSecurityScheme
-                            {
-                                In = ParameterLocation.Header,
-                                Description = "Please insert JWT with Bearer into field",
-                                Name = "Authorization",
-                                Type = SecuritySchemeType.ApiKey
-                            });
-                        //c.AddSecurityDefinition("basicAuth", new OpenApiSecurityScheme
-                        //                                         {
-                        //                                             Type = SecuritySchemeType.Http,
-                        //                                             Scheme = "basic"
-                        //                                         });
-                        c.AddSecurityRequirement(
-                            new OpenApiSecurityRequirement
-                                {
+                        // disable bearer auth
+                        if (1 == 0)
+                        {
+                            c.AddSecurityDefinition(
+                                "Bearer",
+                                new OpenApiSecurityScheme
                                     {
-                                        new OpenApiSecurityScheme
-                                            {
-                                                Reference = new
-                                                            OpenApiReference
-                                                                {
-                                                                    Type = ReferenceType.SecurityScheme,
-                                                                    Id = "Bearer"
-                                                                }
-                                            },
-                                        new string[] { }
-                                    }
-                                });
-                        //c.AddSecurityRequirement(new OpenApiSecurityRequirement
-                        //                             {
-                        //                                 {
-                        //                                     new OpenApiSecurityScheme
-                        //                                         {
-                        //                                             Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "basicAuth" }
-                        //                                         },
-                        //                                     new string[]{}
-                        //                                 }
-                        //                             });
+                                        In = ParameterLocation.Header,
+                                        Description = "Please insert JWT with Bearer into field",
+                                        Name = "Authorization",
+                                        Type = SecuritySchemeType.ApiKey
+                                    });
+                            c.AddSecurityRequirement(
+                                new OpenApiSecurityRequirement
+                                    {
+                                        {
+                                            new OpenApiSecurityScheme
+                                                {
+                                                    Reference = new OpenApiReference
+                                                                    {
+                                                                        Type = ReferenceType
+                                                                            .SecurityScheme,
+                                                                        Id = "Bearer"
+                                                                    }
+                                                },
+                                            new string[] { }
+                                        }
+                                    });
+                        }
                     });
             services.AddSwaggerGenNewtonsoftSupport();
 
@@ -152,14 +142,23 @@
         {
             // migrate any database changes on startup (includes initial db creation)
             dataContext.Database.Migrate();
-
+            app.UseStaticFiles();
+            app.UseDefaultFiles();
             app.UseSwagger();
-            app.UseSwaggerUI(
-                c =>
-                    {
-                        c.SwaggerEndpoint($"/swagger/v1/swagger.json", $"API v1");
-                    }
-                );
+            //app.UseSwaggerUI(
+            //    c =>
+            //        {
+            //            c.SwaggerEndpoint($"/swagger/v1/swagger.json", $"API v1");
+            //        }
+            //    );
+            app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+
+                    var assembly = GetType().GetTypeInfo().Assembly;
+                    var ns = assembly.GetName().Name;
+                    c.IndexStream = () => assembly.GetManifestResourceStream($"{ns}.index.html");
+                });
 
             app.UseRouting();
 
