@@ -15,20 +15,27 @@ using WebApi.Models.Users;
 
 namespace WebApi.Controllers
 {
+    using Microsoft.Extensions.Logging;
+
+    using Serilog;
+
     [Authorize]
     [ApiController]
     [Route("[controller]")]
     public class UsersController : ControllerBase
     {
+        readonly IDiagnosticContext _diagnosticContext;
         private IUserService _userService;
         private IMapper _mapper;
         private readonly AppSettings _appSettings;
 
         public UsersController(
+            IDiagnosticContext diagnosticContext,
             IUserService userService,
             IMapper mapper,
             IOptions<AppSettings> appSettings)
         {
+            _diagnosticContext = diagnosticContext ?? throw new ArgumentNullException(nameof(diagnosticContext));
             _userService = userService;
             _mapper = mapper;
             _appSettings = appSettings.Value;
@@ -38,6 +45,7 @@ namespace WebApi.Controllers
         [HttpPost("authenticate")]
         public IActionResult Authenticate([FromBody]AuthenticateModel model)
         {
+            _diagnosticContext.Set("model", model);
             var user = _userService.Authenticate(model.Username, model.Password);
 
             if (user == null)
@@ -57,6 +65,7 @@ namespace WebApi.Controllers
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
             var tokenString = tokenHandler.WriteToken(token);
+
 
             // return basic user info and authentication token
             return Ok(new

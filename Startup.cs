@@ -8,6 +8,8 @@
 
     using AutoMapper;
 
+    using CorrelationId;
+
     using Microsoft.AspNetCore.Authentication.JwtBearer;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Builder;
@@ -18,6 +20,9 @@
     using Microsoft.Extensions.Hosting;
     using Microsoft.IdentityModel.Tokens;
     using Microsoft.OpenApi.Models;
+
+    using Serilog;
+    using Serilog.Events;
 
     using WebApi.Entities;
     using WebApi.Helpers;
@@ -46,6 +51,7 @@
             services.AddCors();
             services.AddControllers();
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+            services.AddCorrelationId();
 
             // configure strongly typed settings objects
             var appSettingsSection = _configuration.GetSection("AppSettings");
@@ -142,6 +148,7 @@
         {
             // migrate any database changes on startup (includes initial db creation)
             dataContext.Database.Migrate();
+            app.UseSerilogRequestLogging();
             app.UseStaticFiles();
             app.UseDefaultFiles();
             app.UseSwagger();
@@ -159,7 +166,25 @@
                     var ns = assembly.GetName().Name;
                     c.IndexStream = () => assembly.GetManifestResourceStream($"{ns}.index.html");
                 });
+            app.UseCorrelationId();
+            app.UseMiddleware<CorrelationMiddleware>();
+            app.UseMiddleware<RequestResponseLoggingMiddleware>();
 
+            app.UseSerilogRequestLogging(options =>
+                {
+                    // Customize the message template
+                    options.MessageTemplate = "Handled {RequestPath}";
+
+                    // Emit debug-level events instead of the defaults
+                    options.GetLevel = (httpContext, elapsed, ex) => LogEventLevel.Debug;
+
+                    // Attach additional properties to the request completion event
+                    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+                        {
+                            diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
+                            diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
+                        };
+                });
             app.UseRouting();
 
             // global cors policy
