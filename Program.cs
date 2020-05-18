@@ -6,10 +6,7 @@
     using Microsoft.Extensions.Hosting;
 
     using Serilog;
-    using Serilog.Context;
     using Serilog.Events;
-    using Serilog.Extensions.Logging;
-    using Serilog.Formatting.Json;
 
     public class Program
     {
