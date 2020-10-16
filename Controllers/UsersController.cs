@@ -97,10 +97,25 @@ namespace WebApi.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [HttpGet("test/{test}")]
+        public IActionResult GetAll2(string test)
+        {
+            if (test == "test")
+            {
+                throw new Exception("beda beda");
+            }
+            var users = _userService.GetAll();
+            var model = _mapper.Map<IList<UserModel>>(users);
+            return Ok(model);
+        }
 
         [HttpGet]
-        public IActionResult GetAll()
+        public IActionResult GetAll(string test)
         {
+            if (test == "test")
+            {
+                throw new Exception("beda beda");
+            }
             var users = _userService.GetAll();
             var model = _mapper.Map<IList<UserModel>>(users);
             return Ok(model);

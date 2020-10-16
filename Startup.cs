@@ -14,6 +14,7 @@
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
+    using Microsoft.AspNetCore.HttpOverrides;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
@@ -170,6 +171,11 @@
             app.UseMiddleware<CorrelationMiddleware>();
             app.UseMiddleware<RequestResponseLoggingMiddleware>();
 
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+                                        {
+                                            ForwardedHeaders = ForwardedHeaders.XForwardedFor |
+                                                               ForwardedHeaders.XForwardedProto
+                                        });
             app.UseSerilogRequestLogging(options =>
                 {
                     // Customize the message template

@@ -4,6 +4,9 @@
 
     using Serilog;
     using Serilog.Context;
+    using System;
+
+    using Serilog.Events;
 
     public static class Logger
     {
